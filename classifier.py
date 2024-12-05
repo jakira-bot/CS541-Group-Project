@@ -6,7 +6,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, i
 import matplotlib.pyplot as plt
 
 # Step 1: Set up the path to the dataset
-dataset_dir = 'images'  # Directory containing images
+dataset_dir = 'dataset'  # Directory containing images
 
 # Step 2: Preprocessing and Data Augmentation
 train_datagen = ImageDataGenerator(

@@ -4,7 +4,7 @@ Steps:
 
 download https://www.kaggle.com/datasets/just1ce5/genshin-impact-characters-dataset/data
 
-unzip, grab folder name dataset, rename it to images and put in in this directory
+unzip, grab folder name dataset, and put in in this directory
 
 Install python 3.11
 
