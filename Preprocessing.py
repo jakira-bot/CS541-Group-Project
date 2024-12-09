@@ -2,6 +2,7 @@ import glob
 from PIL import Image
 import numpy as np
 import os
+import math
 
 def summary_statistics(root_dir):
     """
@@ -80,11 +81,53 @@ def crop_image(image_path, target_width, target_height):
     return new_image
 
 
-def process_dataset(orig_dataset_path, processing_function, dest_dataset_path, new_width, new_height):
+def expand_image(image_path, target_width, target_height):
+    """
+    Adds white space to the image located at image_path so the final image is the specified width and height, and return the image.
+    This is implemented by overlaying (and centering) the input image on top of a blank white jpg matching the dimensions of the target
+    params.
+    https://pythonexamples.org/pillow-image-overlay/
+    https://www.geeksforgeeks.org/python-pil-image-new-method/
+    """
+
+    # find original image dimensions; create blank white canvas of max image size
+    image = Image.open(image_path)
+    orig_image_width, orig_image_height = image.size
+    canvas = Image.new('RGB', (target_width, target_height), (255,255,255))
+
+    # calculate the coordinates of the larger image where the  smaller image will be overlayed
+    if orig_image_width < target_width:
+        center = float(target_width) / 2.0
+        left = center - (float(orig_image_width) / 2.0)
+        left = int(math.floor(left))
+    else:
+        left = 0
+
+    if orig_image_height < target_height:
+        center = float(target_height) / 2.0
+        upper = center - (float(orig_image_height) / 2.0)
+        upper = int(math.floor(upper))
+    else:
+        upper = 0
+
+    # overlay original image over the white canvas and return
+    canvas.paste(image, (left, upper))
+    return canvas
+    
+
+def process_dataset(orig_dataset_path, processing_function, dest_dataset_path, new_image_prefix, new_width, new_height):
     """
     processes images in dataset, based on processing_function passed in (i.e., passing crop_image calls crop_image on all images)
     Size of output images are specified by params new_width and new_height
     Processed images are saved to new directly specified by dest_dataset_path
+        Parameters:
+            orig_dataset_path   :  name of the main folder; in our case it's 'dataset/'
+            processing_function :  function you're using to process each image (i.e., crop_image())
+            dest_dataset_path   :  name of the newly created folder where you want to land the new images (i.e., 'dataset_cropped/')
+            new_image_prefix    :  prefix you'd like to add to the name of each image (i.e., 'cropped_')
+            new_width           :  specified width of newly created images
+            new_height          :  specified height of newly created images
+        
     """
     # create new directory and duplicate its subfolder structure
     os.mkdir(dest_dataset_path)
@@ -104,9 +147,9 @@ def process_dataset(orig_dataset_path, processing_function, dest_dataset_path, n
         for orig_image in orig_images:
             orig_image_path = orig_subfolder + orig_image
             new_image_object = processing_function(orig_image_path, new_width, new_height)
-            new_image_path = dest_dataset_path + orig_folder + "/cropped_" + orig_image
+            new_image_path = dest_dataset_path + orig_folder + "/" + new_image_prefix + orig_image
             new_image_object.save(new_image_path)
 
-# creates the cropped dataset
+
 dataset_statistics = summary_statistics('dataset/')
-process_dataset('dataset/', crop_image, 'dataset_cropped/', dataset_statistics['min dimensions'][0], dataset_statistics['min dimensions'][1])
+process_dataset('dataset/', expand_image, 'dataset_expanded/', 'expanded_', dataset_statistics['max dimensions'][0], dataset_statistics['max dimensions'][1])
