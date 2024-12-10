@@ -1,6 +1,6 @@
 # CS541-Group-Project
 
-Steps:
+Supervied Learning Steps:
 
 download https://www.kaggle.com/datasets/just1ce5/genshin-impact-characters-dataset/data
 
