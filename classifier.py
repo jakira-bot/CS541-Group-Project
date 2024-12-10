@@ -1,9 +1,12 @@
 import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras import layers, models
 from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
 import matplotlib.pyplot as plt
+from tensorflow.keras.callbacks import EarlyStopping
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
 # Step 1: Set up the path to the dataset
 dataset_dir = 'dataset'  # Directory containing images
@@ -21,10 +24,13 @@ train_datagen = ImageDataGenerator(
     validation_split=0.2        # 20% of data will be used for validation
 )
 
+x = 150
+y = 150
+
 # Step 3: Load and generate training and validation data
 train_generator = train_datagen.flow_from_directory(
     dataset_dir,
-    target_size=(150, 150),     # Resize all images to 150x150
+    target_size=(x, y),     
     batch_size=32,              # Batch size for training
     class_mode='categorical',   # Use categorical labels for multi-class classification
     subset='training'           # Specify this is the training set
@@ -32,21 +38,24 @@ train_generator = train_datagen.flow_from_directory(
 
 validation_generator = train_datagen.flow_from_directory(
     dataset_dir,
-    target_size=(150, 150),
+    target_size=(x, y),
     batch_size=32,
     class_mode='categorical',
     subset='validation'         # Specify this is the validation set
 )
 
-# Step 4: Define the CNN model
+# Step 4: Define the CNN model with GlobalAveragePooling2D
 model = models.Sequential([
-    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)),
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(x, y, 3)),
     layers.MaxPooling2D(2, 2),
     layers.Conv2D(64, (3, 3), activation='relu'),
     layers.MaxPooling2D(2, 2),
     layers.Conv2D(128, (3, 3), activation='relu'),
     layers.MaxPooling2D(2, 2),
-    layers.Flatten(),
+    
+    # Use GlobalAveragePooling2D to reduce the feature map to a vector
+    layers.GlobalAveragePooling2D(),
+    
     layers.Dense(512, activation='relu'),
     layers.Dense(5, activation='softmax')  # 5 output classes
 ])
@@ -58,13 +67,21 @@ model.compile(
     metrics=['accuracy']
 )
 
+
+
 # Step 6: Train the model
+epochs = 10
+batch_size = 32
+steps_per_epoch = train_generator.samples // batch_size
+steps_per_epoch_with_repeat = steps_per_epoch * 2 
+
 history = model.fit(
     train_generator,
-    steps_per_epoch=train_generator.samples // train_generator.batch_size,
-    epochs=10,  # Number of epochs to train
+    steps_per_epoch=steps_per_epoch_with_repeat,
+    epochs=epochs,
     validation_data=validation_generator,
-    validation_steps=validation_generator.samples // validation_generator.batch_size
+    validation_steps=validation_generator.samples // validation_generator.batch_size,
+     callbacks=[early_stopping]
 )
 
 # Step 7: Evaluate the model
@@ -72,7 +89,7 @@ val_loss, val_acc = model.evaluate(validation_generator)
 print(f"Validation accuracy: {val_acc*100:.2f}%")
 
 # Step 8: Save the model for future use
-model.save('image_classifier_model.h5')
+model.save('image_classifier_model.keras')
 
 # Step 9: Make a prediction for a new image after training
 def predict_image(image_path):
